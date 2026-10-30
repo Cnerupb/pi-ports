@@ -8,7 +8,7 @@
 - `skills/` — 17 плагонов (106 скиллов) + `meta/` (5 мета-скиллов), портировано без адаптации содержимого
 - `install.ps1` — общий установщик
 - `uninstall.ps1` — удаление junction'ов
-- `package.json` — pi-package манифест (`pi.skills: ./skills/*/*/`) для установки как пакета
+- `package.json` — pi-package манифест (скиллы + extension roslyn-lsp)
 - `docs/port-notes.md` — что и как портировано, что пропущено и почему
 
 ## Установка

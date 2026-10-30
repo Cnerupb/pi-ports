@@ -53,6 +53,54 @@
 (глобально) или с `-l` (проект), пробный запуск `pi -e ./pi-dotnet-skills`.
 Фильтрация плагонов — через `pi config` (glob-фильтры ресурсов).
 
+## roslyn-lsp (C# LSP)
+
+`extensions/roslyn-lsp/` — собственный мост к Roslyn Language Server: спавнит
+`dnx roslyn-language-server --stdio`, проксирует hover/definition/references/
+completion/diagnostics/symbols через инструмент `csharp_lsp`. Загружается как
+extension пакета (`pi.extensions`).
+
+**Требования (на пользователе):**
+1. .NET SDK 10+ (`dotnet --version`)
+2. `dotnet tool install --global roslyn-language-server --prerelease`
+
+**Проверено:** hover и definition возвращают реальные данные
+(`int Class1.Add(int a, int b)`). Первый вызов в сессии медленный
+(старт сервера + загрузка проекта), сервер отменяет запросы (-32800) во время
+индексации — инструмент делает одну повторную попытку.
+
+**Альтернатива — pi-lsp (`pi install npm:pi-lsp`):** декларативный LSP через
+`~/.pi/agent/lsp.json`. На текущий момент (pi-lsp 0.1.7) на Windows заблокирован
+рядом багов самого пакета: глобальный конфиг ищется через `process.env.HOME`
+(на Windows пуст — нужен `PI_AGENT_DIR`), поиск бинаря дублирует расширение
+(`cmd.exe` не находится), `rootMarkers` без glob-поддержки, spawn только
+`shell: false` (.cmd shim'ы .NET-тулов не запускаются, EINVAL). Плюс тот же
+roslyn-сервер отменяет запросы при прогреве. Конфиг-пример (рабочий поиск
+бинаря, но запросы отменяются) сохранён ниже. Если апстрим починит spawn/
+HOME — можно мигрировать, инструменты `lsp_*` удобнее нашего моста.
+
+Рабочий `~/.pi/agent/lsp.json` (эталон для pi-lsp, не используется мостом):
+
+```json
+{
+  "version": 1,
+  "servers": [{
+    "id": "roslyn-csharp",
+    "include": ["**/*.cs", "**/*.razor", "**/*.cshtml"],
+    "rootMarkers": ["obj", ".git", "global.json", "Directory.Build.props", "nuget.config"],
+    "bin": "C:\\Windows\\System32\\cmd.exe",
+    "args": ["/d", "/s", "/c", "roslyn-language-server", "--stdio", "--autoLoadProjects"],
+    "cwd": "{root}",
+    "languageIdByExtension": { ".cs": "csharp", ".razor": "aspnetcorerazor", ".cshtml": "aspnetcorerazor" },
+    "startupTimeoutMs": 120000,
+    "diagnosticsWaitMs": 5000
+  }]
+}
+```
+
+Также требуется переменная окружения `PI_AGENT_DIR=C:\Users\<user>\.pi\agent`
+(обход бага HOME).
+
 ## Особенности
 
 - Скрипты скиллов Windows-friendly: PowerShell (`*.ps1`), один Python, один C#.

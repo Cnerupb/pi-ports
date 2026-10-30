@@ -11,6 +11,9 @@
     "skills"
   ],
   "pi": {
+    "extensions": [
+      "./extensions/roslyn-lsp/index.ts"
+    ],
     "skills": [
       "./skills/*/*/"
     ]
