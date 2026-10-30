@@ -13,7 +13,20 @@
 
 ## Установка
 
-**Вариант A — pi-package** (всё разом, управление через `pi config`):
+### Требования
+
+Скиллам требования не нужны. Для LSP-инструмента `csharp_lsp` (идёт с пакетом
+в Варианте A):
+
+1. .NET SDK 10+ — проверка: `dotnet --version`
+2. Roslyn Language Server:
+   ```powershell
+   dotnet tool install --global roslyn-language-server --prerelease
+   ```
+
+Без них пакет и скиллы работают, `csharp_lsp` лишь сообщит, чего не хватает.
+
+### Вариант A — pi-package (Recommended)
 
 ```powershell
 pi install ./pi-dotnet-skills        # глобально
@@ -22,8 +35,9 @@ pi remove ./pi-dotnet-skills         # удаление
 ```
 
 Пробный запуск без установки: `pi -e ./pi-dotnet-skills`.
+Ставит всё: 111 скиллов + extension roslyn-lsp (инструмент `csharp_lsp`).
 
-**Вариант B — install.ps1** (пер-плагонная гранулярность, дефолтный костяк):
+### Вариант B — install.ps1 (пер-плагонная гранулярность, дефолтный костяк)
 
 Дефолтный костяк (10 плагонов, 72 скилла) глобально:
 
@@ -49,7 +63,7 @@ pi remove ./pi-dotnet-skills         # удаление
 ./install.ps1 -Scope Local          # или -LocalDir <путь>
 ```
 
-Отдельный плагон — свой `install.ps1`:
+Отдельный плагон — свой `install.ps1` (только скиллы, без extension):
 
 ```powershell
 ./skills/dotnet-diag/install.ps1 [-Scope Global|Local]
