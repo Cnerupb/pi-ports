@@ -1,3 +1,6 @@
 [submodule "pi-decision-records/sources/decision-records"]
 	path = pi-decision-records/sources/decision-records
 	url = https://github.com/decision-records/decision-records.git
+[submodule "pi-dotnet-skills/sources/skills"]
+	path = pi-dotnet-skills/sources/skills
+	url = https://github.com/dotnet/skills.git
