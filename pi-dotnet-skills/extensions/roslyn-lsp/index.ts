@@ -45,6 +45,7 @@ class LspClient {
 	private nextId = 1;
 	private pending = new Map<number, { resolve: (v: Json) => void; reject: (e: Error) => void }>();
 	private diagnostics = new Map<string, Json[]>();
+	private diagnosticWaiters = new Map<string, Array<(diags: Json[]) => void>>();
 	private stderrTail = "";
 	private initialized = false;
 	private starting: Promise<void> | null = null;
@@ -169,7 +170,14 @@ class LspClient {
 			}
 			if (msg.method === "textDocument/publishDiagnostics") {
 				const uri = String((msg.params as Json).uri ?? "");
-				this.diagnostics.set(uri, (msg.params as Json).diagnostics as Json[]);
+				const diags = (msg.params as Json).diagnostics as Json[];
+				this.diagnostics.set(uri, diags);
+				// будим ожидающие запросы (вместо поллинга)
+				const waiters = this.diagnosticWaiters.get(uri);
+				if (waiters) {
+					this.diagnosticWaiters.delete(uri);
+					for (const w of waiters) w(diags);
+				}
 			} else if (msg.id !== undefined && this.pending.has(Number(msg.id))) {
 				const p = this.pending.get(Number(msg.id))!;
 				this.pending.delete(Number(msg.id));
@@ -214,6 +222,45 @@ class LspClient {
 		const uri = `file:///${abs.replace(/\\/g, "/")}`;
 		this.notify("textDocument/didOpen", { textDocument: { uri, languageId: "csharp", version: 1, text } });
 		return uri;
+	}
+
+	// Ожидание publishDiagnostics для uri (до timeoutMs); при таймауте — последнее известное состояние.
+	private waitForDiagnostics(uri: string, timeoutMs: number): Promise<Json[] | undefined> {
+		return new Promise((resolve) => {
+			const finish = (diags: Json[] | undefined) => {
+				clearTimeout(timer);
+				const list = this.diagnosticWaiters.get(uri);
+				if (list) {
+					const idx = list.indexOf(onPublish);
+					if (idx >= 0) list.splice(idx, 1);
+					if (list.length === 0) this.diagnosticWaiters.delete(uri);
+				}
+				resolve(diags);
+			};
+			const timer = setTimeout(() => finish(this.diagnostics.get(uri)), timeoutMs);
+			const onPublish = (diags: Json[]) => finish(diags);
+			const list = this.diagnosticWaiters.get(uri) ?? [];
+			list.push(onPublish);
+			this.diagnosticWaiters.set(uri, list);
+		});
+	}
+
+	private static formatDiagnostics(diags: Json[]): string {
+		return diags
+			.map(
+				(d: Json) =>
+					`[${d.severity === 1 ? "Error" : d.severity === 2 ? "Warning" : "Info"}] ` +
+					`${JSON.stringify((d.range as Json)?.start ?? "?")}: ${d.message}`,
+			)
+			.join("\n");
+	}
+
+	// Pull diagnostics (LSP 3.17): сервер возвращает отчёт сразу, без ожидания пуша.
+	private async pullDiagnostics(uri: string): Promise<Json[] | undefined> {
+		const report = await this.requestResilient("textDocument/diagnostic", { textDocument: { uri } }).catch(() => null);
+		if (!report) return undefined;
+		if (Array.isArray((report as Json).items)) return (report as Json).items as Json[];
+		return undefined;
 	}
 
 	private static summarize(value: unknown, depth = 0): string {
@@ -286,31 +333,14 @@ class LspClient {
 				if (!params.file) throw new Error("для этой операции нужен параметр file");
 				const uri = this.openDocument(params.file);
 				if (op === "diagnostics") {
-					// Ждём publishDiagnostics до 15с; если сервер не пушит — пробуем pull (LSP 3.17).
-					this.diagnostics.delete(uri);
-					const deadline = Date.now() + 15_000;
-					while (Date.now() < deadline && !this.diagnostics.has(uri)) {
-						await new Promise((r) => setTimeout(r, 500));
-					}
-					let diags = this.diagnostics.get(uri);
-					if (!diags) {
-						const pulled = await this.requestResilient("textDocument/diagnostic", {
-							textDocument: { uri },
-							identifier: "roslyn",
-						}).catch(() => null);
-						const items = (pulled?.items ?? pulled?.relatedDocuments) as Json[] | undefined;
-						if (Array.isArray(items)) diags = items;
-					}
-					if (!diags || !diags.length) {
+					// 1) ждём push publishDiagnostics (до 30с, сервер индексирует проект при первом didOpen);
+					// 2) если пуша не было — pull-запрос (LSP 3.17).
+					let diags = await this.waitForDiagnostics(uri, 30_000);
+					if (!diags) diags = await this.pullDiagnostics(uri);
+					if (!diags || diags.length === 0) {
 						return "Диагностик нет (проект большой? сервер мог не успеть — повторите вызов).";
 					}
-					return diags
-						.map(
-							(d: Json) =>
-								`[${d.severity === 1 ? "Error" : d.severity === 2 ? "Warning" : "Info"}] ` +
-								`${JSON.stringify((d.range as Json)?.start ?? "?")}: ${d.message}`,
-						)
-						.join("\n");
+					return LspClient.formatDiagnostics(diags);
 				}
 				if (op === "document_symbols") {
 					const result = await this.requestResilient("textDocument/documentSymbol", { textDocument: { uri } });
