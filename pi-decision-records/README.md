@@ -10,16 +10,10 @@
 
 ## Установка
 
-Через [skills CLI](https://agentskills.io) (после пуша репозитория на GitHub):
-
-```sh
-npx skills add -g Cnerupb/pi-ports pi-decision-records/skills/decision-records
+```powershell
+./install.ps1
 ```
 
-Или вручную — скопировать каталог скилла:
-
-```sh
-cp -r skills/decision-records ~/.agents/skills/
-```
+Скрипт создаёт junction `~/.agents/skills/decision-records` → `skills/decision-records` этого репозитория (правки скилла сразу видны pi, без переустановки; junction не требует прав администратора). Проверить можно командой `npx skills list`.
 
 Затем в pi: `/skill:decision-records` или через автоматическую загрузку по описанию.
