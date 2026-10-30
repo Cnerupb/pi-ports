@@ -46,6 +46,13 @@
   GitHub Copilot (copilot-auth, agents/, repo-variables). pi его не понимает.
 - **`eng/`, `tests/`, `.github/`** — инфраструктура исходного репозитория.
 
+## pi-package
+
+`package.json` объявляет пакет (`keywords: pi-package`, `pi.skills: ./skills/*/*/`) —
+все 111 скиллов дискаверятся pi как ресурсы пакета. Установка: `pi install ./pi-dotnet-skills`
+(глобально) или с `-l` (проект), пробный запуск `pi -e ./pi-dotnet-skills`.
+Фильтрация плагонов — через `pi config` (glob-фильтры ресурсов).
+
 ## Особенности
 
 - Скрипты скиллов Windows-friendly: PowerShell (`*.ps1`), один Python, один C#.
