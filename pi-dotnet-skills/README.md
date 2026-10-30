@@ -41,5 +41,13 @@
 ./skills/dotnet-diag/install.ps1 [-Scope Global|Local]
 ```
 
+Удаление (только junction'ы этого репозитория, чужие скиллы не трогаются;
+по умолчанию удаляется костяк, `-All` — всё установленное):
+
+```powershell
+./uninstall.ps1            # костяк
+./uninstall.ps1 -All       # все плагины, включая meta
+```
+
 Проверка: `npx skills list -g`, в pi — автоматическая загрузка по описанию
 или `/skill:<name>`.
