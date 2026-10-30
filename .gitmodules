@@ -1,0 +1,3 @@
+[submodule "pi-decision-records/sources/decision-records"]
+	path = pi-decision-records/sources/decision-records
+	url = https://github.com/decision-records/decision-records.git
