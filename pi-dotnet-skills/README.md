@@ -37,6 +37,34 @@ pi remove ./pi-dotnet-skills         # удаление
 Пробный запуск без установки: `pi -e ./pi-dotnet-skills`.
 Ставит всё: 111 скиллов + extension roslyn-lsp (инструмент `csharp_lsp`).
 
+### Дефолтный набор при установке пакета
+
+Пакет экспонирует все 111 скиллов, но по умолчанию рекомендуется грузить
+только ядро (костяк 10 плагонов). Для этого запись пакета в settings должна
+быть объектом с skills-фильтром-исключением. После `pi install` замените
+строку пакета в `~/.pi/agent/settings.json` (или `.pi/settings.json` проекта)
+на:
+
+```json
+{
+  "source": "<путь-до-пакета>",
+  "skills": [
+    "!skills/dotnet-blazor/*/SKILL.md",
+    "!skills/dotnet-maui/*/SKILL.md",
+    "!skills/dotnet-winforms/*/SKILL.md",
+    "!skills/dotnet-diag/*/SKILL.md",
+    "!skills/dotnet-experimental/*/SKILL.md",
+    "!skills/dotnet11/*/SKILL.md",
+    "!skills/dotnet-advanced/*/SKILL.md",
+    "!skills/meta/*/SKILL.md"
+  ]
+}
+```
+
+Исключённые плагины не попадают в роутинг, но не удаляются: включить любой
+обратно можно через `pi config` (убрать его строку из фильтра) — либо
+поставить отдельно через Вариант B. Без фильтра (запись строкой) грузится всё.
+
 ### Вариант B — install.ps1 (пер-плагонная гранулярность, дефолтный костяк)
 
 Дефолтный костяк (10 плагонов, 72 скилла) глобально:
